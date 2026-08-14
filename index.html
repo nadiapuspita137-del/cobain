@@ -46,18 +46,28 @@
 
 <script>
 const DEFAULT_ID='ekzHIouo8Q4';
+const INVIDIOUS_INSTANCES=[
+  'https://inv.nadeko.net',
+  'https://invidious.nerdvpn.de',
+  'https://yt.chocolatemoo53.com'
+];
 let currentId=DEFAULT_ID;
 let player=null;
 let apiReady=false;
 const $=id=>document.getElementById(id);
 
 function setStatus(t){ $('status').textContent=t; }
+function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+function formatDuration(sec){
+  if(!Number.isFinite(Number(sec))) return '';
+  sec=Number(sec); const m=Math.floor(sec/60), s=String(Math.floor(sec%60)).padStart(2,'0'); return `${m}:${s}`;
+}
 function setTrack(id,title,channel,thumb){
   currentId=id;
   $('title').textContent=title||'YouTube Music';
   $('artist').textContent=channel||'YouTube';
   $('cover').src=thumb||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-  $('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${id}`,'_blank','noopener');
+  $('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`,'_blank','noopener');
   if(apiReady){ player.loadVideoById(id); setStatus('Memuat lagu...'); }
   else setStatus('Menyiapkan player...');
 }
@@ -65,11 +75,16 @@ function setTrack(id,title,channel,thumb){
 function onYouTubeIframeAPIReady(){
   player=new YT.Player('youtube-player',{
     videoId:currentId,
+    width:'100%',height:'100%',
     playerVars:{playsinline:1,rel:0,controls:1,modestbranding:1},
     events:{
       onReady:()=>{apiReady=true; setStatus('Siap diputar');},
-      onStateChange:e=>{ if(e.data===1){$('playBtn').textContent='Ⅱ';setStatus('Sedang diputar');} else if(e.data===2){$('playBtn').textContent='▶';setStatus('Dijeda');} else if(e.data===0){$('playBtn').textContent='▶';setStatus('Selesai');} },
-      onError:e=>setStatus('Video ini tidak bisa diputar. Pilih hasil lain.')
+      onStateChange:e=>{
+        if(e.data===1){$('playBtn').textContent='Ⅱ';setStatus('Sedang diputar');}
+        else if(e.data===2){$('playBtn').textContent='▶';setStatus('Dijeda');}
+        else if(e.data===0){$('playBtn').textContent='▶';setStatus('Selesai');}
+      },
+      onError:e=>{setStatus('Video ini tidak bisa diputar. Pilih hasil lain.');$('playBtn').textContent='▶';}
     }
   });
 }
@@ -79,35 +94,49 @@ $('playBtn').onclick=()=>{
   const state=player.getPlayerState();
   if(state===1) player.pauseVideo(); else player.playVideo();
 };
-$('backBtn').onclick=()=>{ if(player) player.seekTo(0,true); };
+$('backBtn').onclick=()=>{if(player){player.seekTo(0,true);player.playVideo();}};
 $('searchBtn').onclick=search;
 $('query').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
+
+async function fetchJson(url,signal){
+  const r=await fetch(url,{signal,headers:{Accept:'application/json'}});
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+function normalizeInvidious(data){
+  return (Array.isArray(data)?data:[]).filter(x=>x.type==='video' && x.videoId).map(x=>({
+    id:x.videoId,title:x.title,channel:x.author||'YouTube',thumb:(x.videoThumbnails||[]).find(t=>t.quality==='medium')?.url || x.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${x.videoId}/mqdefault.jpg`,duration:formatDuration(x.lengthSeconds)
+  }));
+}
 
 async function search(){
   const q=$('query').value.trim();
   if(!q)return;
-  $('resultsList').innerHTML='<div class="loading">Mencari di YouTube...</div>';
-  setStatus('Mencari lagu...');
+  $('resultsList').innerHTML='<div class="loading">Mencari lagu...</div>';
+  $('count').textContent=''; setStatus('Mencari di YouTube...');
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),10000);
   try{
-    const url='https://pipedapi.kavin.rocks/search?'+new URLSearchParams({q,filter:'videos'});
-    const r=await fetch(url,{headers:{Accept:'application/json'}});
-    if(!r.ok) throw new Error('API');
-    const data=await r.json();
-    const items=(data.items||[]).filter(x=>x.url?.includes('/watch?v=')||x.type==='stream').slice(0,12);
-    if(!items.length) throw new Error('empty');
-    $('count').textContent=items.length+' hasil';
-    $('resultsList').innerHTML=items.map((x,i)=>{
-      const id=x.url?.split('v=')[1]?.split('&')[0]||x.id;
-      const thumb=x.thumbnail||`https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
-      const title=(x.title||'Untitled').replace(/</g,'&lt;');
-      const channel=(x.uploaderName||x.channelName||'YouTube').replace(/</g,'&lt;');
-      return `<button class="result" data-id="${id}" data-title="${title}" data-channel="${channel}" data-thumb="${thumb}"><img src="${thumb}" alt=""><span><b>${title}</b><small>${channel}${x.duration?` · ${x.duration}`:''}</small></span><i>▶</i></button>`;
-    }).join('');
+    let items=[];
+    for(const host of INVIDIOUS_INSTANCES){
+      try{
+        const url=`${host}/api/v1/search?${new URLSearchParams({q,type:'video',page:'1'})}`;
+        const data=await fetchJson(url,controller.signal);
+        items=normalizeInvidious(data);
+        if(items.length) break;
+      }catch(e){ /* coba instance berikutnya */ }
+    }
+    clearTimeout(timeout);
+    if(!items.length) throw new Error('NO_RESULTS');
+    items=items.slice(0,15);
+    $('count').textContent=`${items.length} hasil`;
+    $('resultsList').innerHTML=items.map(x=>`<button class="result" data-id="${escapeHtml(x.id)}" data-title="${escapeHtml(x.title)}" data-channel="${escapeHtml(x.channel)}" data-thumb="${escapeHtml(x.thumb)}"><img src="${escapeHtml(x.thumb)}" alt=""><span><b>${escapeHtml(x.title)}</b><small>${escapeHtml(x.channel)}${x.duration?` · ${x.duration}`:''}</small></span><i>▶</i></button>`).join('');
     document.querySelectorAll('.result').forEach(b=>b.onclick=()=>setTrack(b.dataset.id,b.dataset.title,b.dataset.channel,b.dataset.thumb));
     setStatus('Pilih lagu untuk diputar');
   }catch(err){
-    $('count').textContent='';
-    $('resultsList').innerHTML='<div class="error">Pencarian sedang gagal. Coba lagi beberapa detik lagi, atau buka YouTube langsung.</div>';
+    clearTimeout(timeout);
+    $('resultsList').innerHTML='<div class="error">Pencarian gagal. Layanan pencarian YouTube sedang tidak merespons. Coba lagi sebentar.</div>';
     setStatus('Pencarian gagal');
   }
 }
