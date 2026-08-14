@@ -15,9 +15,11 @@
   </header>
 
   <section class="search-box">
-    <input id="query" type="search" value="When I Was Your Man Bruno Mars" placeholder="Cari lagu, artis, atau judul..." autocomplete="off">
+    <input id="query" type="search" value="When I Was Your Man Bruno Mars" placeholder="Cari lagu, artis, atau tempel link YouTube..." autocomplete="off">
     <button id="searchBtn">Cari</button>
   </section>
+
+  <p class="search-note">Pencarian gratis dibuka lewat YouTube. Kalau kau tempel link YouTube di kotak atas, videonya langsung dimuat ke player.</p>
 
   <section class="player-card">
     <div class="cover"><img id="cover" src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Cover"></div>
@@ -35,8 +37,11 @@
   </section>
 
   <section class="results">
-    <div class="section-head"><h2>Hasil pencarian</h2><span id="count"></span></div>
-    <div id="resultsList" class="list"></div>
+    <div class="section-head"><h2>Cari di YouTube</h2></div>
+    <div class="search-card">
+      <p>Tekan <b>Cari</b> untuk membuka pencarian YouTube. Pilih lagu, lalu salin URL videonya dan tempel kembali ke kotak pencarian di sini.</p>
+      <button id="youtubeSearch" class="yt-search">Buka hasil pencarian YouTube ↗</button>
+    </div>
   </section>
 
   <section class="yt-wrap">
@@ -46,103 +51,78 @@
 
 <script>
 const DEFAULT_ID='ekzHIouo8Q4';
-const INVIDIOUS_INSTANCES=[
-  'https://inv.nadeko.net',
-  'https://invidious.nerdvpn.de',
-  'https://yt.chocolatemoo53.com'
-];
 let currentId=DEFAULT_ID;
 let player=null;
 let apiReady=false;
 const $=id=>document.getElementById(id);
 
-function setStatus(t){ $('status').textContent=t; }
-function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
-function formatDuration(sec){
-  if(!Number.isFinite(Number(sec))) return '';
-  sec=Number(sec); const m=Math.floor(sec/60), s=String(Math.floor(sec%60)).padStart(2,'0'); return `${m}:${s}`;
+function extractVideoId(value){
+  const text=value.trim();
+  const patterns=[
+    /youtu\.be\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/watch\?[^#]*v=([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/,
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{11})/
+  ];
+  for(const p of patterns){const m=text.match(p);if(m)return m[1];}
+  if(/^[A-Za-z0-9_-]{11}$/.test(text)) return text;
+  return null;
 }
-function setTrack(id,title,channel,thumb){
+
+function setStatus(t){$('status').textContent=t;}
+function setTrack(id,title='YouTube Music',artist='YouTube'){
   currentId=id;
-  $('title').textContent=title||'YouTube Music';
-  $('artist').textContent=channel||'YouTube';
-  $('cover').src=thumb||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
-  $('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(id)}`,'_blank','noopener');
-  if(apiReady){ player.loadVideoById(id); setStatus('Memuat lagu...'); }
+  $('title').textContent=title;
+  $('artist').textContent=artist;
+  $('cover').src=`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  $('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${id}`,'_blank','noopener');
+  if(apiReady){player.loadVideoById(id);setStatus('Memuat lagu...');}
   else setStatus('Menyiapkan player...');
+}
+
+function search(){
+  const q=$('query').value.trim();
+  if(!q)return;
+  const id=extractVideoId(q);
+  if(id){
+    setTrack(id,'Video YouTube','YouTube');
+    setStatus('Video dimuat. Tekan Play.');
+    return;
+  }
+  window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,'_blank','noopener');
+  setStatus('Hasil pencarian YouTube dibuka di tab baru.');
 }
 
 function onYouTubeIframeAPIReady(){
   player=new YT.Player('youtube-player',{
     videoId:currentId,
-    width:'100%',height:'100%',
     playerVars:{playsinline:1,rel:0,controls:1,modestbranding:1},
     events:{
-      onReady:()=>{apiReady=true; setStatus('Siap diputar');},
+      onReady:()=>{apiReady=true;setStatus('Siap diputar');},
       onStateChange:e=>{
         if(e.data===1){$('playBtn').textContent='Ⅱ';setStatus('Sedang diputar');}
         else if(e.data===2){$('playBtn').textContent='▶';setStatus('Dijeda');}
         else if(e.data===0){$('playBtn').textContent='▶';setStatus('Selesai');}
       },
-      onError:e=>{setStatus('Video ini tidak bisa diputar. Pilih hasil lain.');$('playBtn').textContent='▶';}
+      onError:e=>setStatus('Video tidak bisa diputar di embed. Buka lewat YouTube.')
     }
   });
 }
 
 $('playBtn').onclick=()=>{
   if(!player){setStatus('Player masih dimuat...');return;}
-  const state=player.getPlayerState();
-  if(state===1) player.pauseVideo(); else player.playVideo();
+  if(player.getPlayerState()===1)player.pauseVideo();else player.playVideo();
 };
-$('backBtn').onclick=()=>{if(player){player.seekTo(0,true);player.playVideo();}};
+$('backBtn').onclick=()=>{if(player)player.seekTo(0,true);};
+$('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${currentId}`,'_blank','noopener');
 $('searchBtn').onclick=search;
+$('youtubeSearch').onclick=()=>{
+  const q=$('query').value.trim()||'When I Was Your Man Bruno Mars';
+  window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,'_blank','noopener');
+};
 $('query').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
 
-async function fetchJson(url,signal){
-  const r=await fetch(url,{signal,headers:{Accept:'application/json'}});
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
-}
-
-function normalizeInvidious(data){
-  return (Array.isArray(data)?data:[]).filter(x=>x.type==='video' && x.videoId).map(x=>({
-    id:x.videoId,title:x.title,channel:x.author||'YouTube',thumb:(x.videoThumbnails||[]).find(t=>t.quality==='medium')?.url || x.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${x.videoId}/mqdefault.jpg`,duration:formatDuration(x.lengthSeconds)
-  }));
-}
-
-async function search(){
-  const q=$('query').value.trim();
-  if(!q)return;
-  $('resultsList').innerHTML='<div class="loading">Mencari lagu...</div>';
-  $('count').textContent=''; setStatus('Mencari di YouTube...');
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),10000);
-  try{
-    let items=[];
-    for(const host of INVIDIOUS_INSTANCES){
-      try{
-        const url=`${host}/api/v1/search?${new URLSearchParams({q,type:'video',page:'1'})}`;
-        const data=await fetchJson(url,controller.signal);
-        items=normalizeInvidious(data);
-        if(items.length) break;
-      }catch(e){ /* coba instance berikutnya */ }
-    }
-    clearTimeout(timeout);
-    if(!items.length) throw new Error('NO_RESULTS');
-    items=items.slice(0,15);
-    $('count').textContent=`${items.length} hasil`;
-    $('resultsList').innerHTML=items.map(x=>`<button class="result" data-id="${escapeHtml(x.id)}" data-title="${escapeHtml(x.title)}" data-channel="${escapeHtml(x.channel)}" data-thumb="${escapeHtml(x.thumb)}"><img src="${escapeHtml(x.thumb)}" alt=""><span><b>${escapeHtml(x.title)}</b><small>${escapeHtml(x.channel)}${x.duration?` · ${x.duration}`:''}</small></span><i>▶</i></button>`).join('');
-    document.querySelectorAll('.result').forEach(b=>b.onclick=()=>setTrack(b.dataset.id,b.dataset.title,b.dataset.channel,b.dataset.thumb));
-    setStatus('Pilih lagu untuk diputar');
-  }catch(err){
-    clearTimeout(timeout);
-    $('resultsList').innerHTML='<div class="error">Pencarian gagal. Layanan pencarian YouTube sedang tidak merespons. Coba lagi sebentar.</div>';
-    setStatus('Pencarian gagal');
-  }
-}
-
-$('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${currentId}`,'_blank','noopener');
-setTrack(DEFAULT_ID,'When I Was Your Man','Bruno Mars',`https://i.ytimg.com/vi/${DEFAULT_ID}/hqdefault.jpg`);
+setTrack(DEFAULT_ID,'When I Was Your Man','Bruno Mars');
 </script>
 <script src="https://www.youtube.com/iframe_api"></script>
 </body>
