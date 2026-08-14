@@ -1,22 +1,120 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#080808">
-  <title>Music • When I Was Your Man</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080808">
+<title>YT Music Player</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="player">
-    <div class="art"><img src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Bruno Mars - When I Was Your Man"></div>
-    <p class="artist">BRUNO MARS</p>
-    <h1>When I Was<br><span>Your Man</span></h1>
-    <p class="hint">Tekan tombol play di bawah. Langsung dengar dari YouTube.</p>
-    <div class="youtube">
-      <iframe src="https://www.youtube.com/embed/ekzHIouo8Q4?playsinline=1&rel=0&modestbranding=1" title="Bruno Mars - When I Was Your Man" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+<main class="app">
+  <header>
+    <div class="logo">MUSIC<span>.</span></div>
+    <div class="source">SOURCE · YOUTUBE</div>
+  </header>
+
+  <section class="search-box">
+    <input id="query" type="search" value="When I Was Your Man Bruno Mars" placeholder="Cari lagu, artis, atau judul..." autocomplete="off">
+    <button id="searchBtn">Cari</button>
+  </section>
+
+  <section class="player-card">
+    <div class="cover"><img id="cover" src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Cover"></div>
+    <div class="details">
+      <small>NOW PLAYING</small>
+      <h1 id="title">When I Was Your Man</h1>
+      <p id="artist">Bruno Mars</p>
+      <div class="actions">
+        <button id="backBtn" class="round">↶</button>
+        <button id="playBtn" class="play">▶</button>
+        <button id="openBtn" class="round">↗</button>
+      </div>
+      <div id="status">Siap diputar</div>
     </div>
-    <a class="youtube-link" href="https://www.youtube.com/watch?v=ekzHIouo8Q4" target="_blank" rel="noopener">Buka langsung di YouTube ↗</a>
-  </main>
+  </section>
+
+  <section class="results">
+    <div class="section-head"><h2>Hasil pencarian</h2><span id="count"></span></div>
+    <div id="resultsList" class="list"></div>
+  </section>
+
+  <section class="yt-wrap">
+    <div id="youtube-player"></div>
+  </section>
+</main>
+
+<script>
+const DEFAULT_ID='ekzHIouo8Q4';
+let currentId=DEFAULT_ID;
+let player=null;
+let apiReady=false;
+const $=id=>document.getElementById(id);
+
+function setStatus(t){ $('status').textContent=t; }
+function setTrack(id,title,channel,thumb){
+  currentId=id;
+  $('title').textContent=title||'YouTube Music';
+  $('artist').textContent=channel||'YouTube';
+  $('cover').src=thumb||`https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+  $('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${id}`,'_blank','noopener');
+  if(apiReady){ player.loadVideoById(id); setStatus('Memuat lagu...'); }
+  else setStatus('Menyiapkan player...');
+}
+
+function onYouTubeIframeAPIReady(){
+  player=new YT.Player('youtube-player',{
+    videoId:currentId,
+    playerVars:{playsinline:1,rel:0,controls:1,modestbranding:1},
+    events:{
+      onReady:()=>{apiReady=true; setStatus('Siap diputar');},
+      onStateChange:e=>{ if(e.data===1){$('playBtn').textContent='Ⅱ';setStatus('Sedang diputar');} else if(e.data===2){$('playBtn').textContent='▶';setStatus('Dijeda');} else if(e.data===0){$('playBtn').textContent='▶';setStatus('Selesai');} },
+      onError:e=>setStatus('Video ini tidak bisa diputar. Pilih hasil lain.')
+    }
+  });
+}
+
+$('playBtn').onclick=()=>{
+  if(!player){setStatus('Player masih dimuat...');return;}
+  const state=player.getPlayerState();
+  if(state===1) player.pauseVideo(); else player.playVideo();
+};
+$('backBtn').onclick=()=>{ if(player) player.seekTo(0,true); };
+$('searchBtn').onclick=search;
+$('query').addEventListener('keydown',e=>{if(e.key==='Enter')search();});
+
+async function search(){
+  const q=$('query').value.trim();
+  if(!q)return;
+  $('resultsList').innerHTML='<div class="loading">Mencari di YouTube...</div>';
+  setStatus('Mencari lagu...');
+  try{
+    const url='https://pipedapi.kavin.rocks/search?'+new URLSearchParams({q,filter:'videos'});
+    const r=await fetch(url,{headers:{Accept:'application/json'}});
+    if(!r.ok) throw new Error('API');
+    const data=await r.json();
+    const items=(data.items||[]).filter(x=>x.url?.includes('/watch?v=')||x.type==='stream').slice(0,12);
+    if(!items.length) throw new Error('empty');
+    $('count').textContent=items.length+' hasil';
+    $('resultsList').innerHTML=items.map((x,i)=>{
+      const id=x.url?.split('v=')[1]?.split('&')[0]||x.id;
+      const thumb=x.thumbnail||`https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+      const title=(x.title||'Untitled').replace(/</g,'&lt;');
+      const channel=(x.uploaderName||x.channelName||'YouTube').replace(/</g,'&lt;');
+      return `<button class="result" data-id="${id}" data-title="${title}" data-channel="${channel}" data-thumb="${thumb}"><img src="${thumb}" alt=""><span><b>${title}</b><small>${channel}${x.duration?` · ${x.duration}`:''}</small></span><i>▶</i></button>`;
+    }).join('');
+    document.querySelectorAll('.result').forEach(b=>b.onclick=()=>setTrack(b.dataset.id,b.dataset.title,b.dataset.channel,b.dataset.thumb));
+    setStatus('Pilih lagu untuk diputar');
+  }catch(err){
+    $('count').textContent='';
+    $('resultsList').innerHTML='<div class="error">Pencarian sedang gagal. Coba lagi beberapa detik lagi, atau buka YouTube langsung.</div>';
+    setStatus('Pencarian gagal');
+  }
+}
+
+$('openBtn').onclick=()=>window.open(`https://www.youtube.com/watch?v=${currentId}`,'_blank','noopener');
+setTrack(DEFAULT_ID,'When I Was Your Man','Bruno Mars',`https://i.ytimg.com/vi/${DEFAULT_ID}/hqdefault.jpg`);
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
