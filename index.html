@@ -1,70 +1,81 @@
 <!doctype html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080808">
-<title>Music Player • Playlist</title>
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="playlist.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080808">
+  <title>Music Player • Playlist</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="playlist.css">
 </head>
 <body>
 <main class="app">
-<header>
-<div class="logo">MUSIC<span>.</span></div>
-<div class="source">SOURCE · YOUTUBE</div>
-</header>
-<section class="search-box">
-<input id="query" type="search" value="When I Was Your Man Bruno Mars" placeholder="Cari lagu, artis, atau tempel link YouTube..." autocomplete="off">
-<button id="search-btn" class="btn-search">Cari</button>
-</section>
-<section class="player-card">
-<div class="cover">
-<button id="cover-btn" class="cover-btn">
-<img id="cover" src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Cover">
-<div id="overlay" class="overlay">▶</div>
-</button>
-</div>
-<div class="details">
-<small>NOW PLAYING</small>
-<h1 id="title">When I Was Your Man</h1>
-<p id="artist">Bruno Mars</p>
-<div class="status">
-<span id="status" class="status-text">Loading...</span>
-<span id="status-dot" class="status-dot"></span>
-</div>
-<div class="controls">
-<button id="back-btn" class="control-btn">⏮</button>
-<button id="play-btn" class="control-btn play">▶</button>
-<button id="mute-btn" class="control-btn">🔊</button>
-</div>
-<div class="progress-bar">
-<input id="progress" type="range" min="0" max="100" value="0">
-<div class="time-display">
-<span id="current-time">0:00</span>
-<span id="duration">0:00</span>
-</div>
-</div>
-<div class="volume-control">
-<input id="volume" type="range" min="0" max="100" value="50">
-</div>
-</div>
-</section>
-<section class="playlist">
-<div class="section-head">
-<div>
-<h2>Playlist kau</h2>
-<span id="playlist-info">13 lagu · klik lagu untuk langsung play</span>
-</div>
-<button id="open-search" class="mini-btn">YouTube ↗</button>
-</div>
-<div id="playlist-list" class="playlist-list"></div>
-</section>
-<section class="yt-wrap">
-<div id="youtube-player"></div>
-</section>
+  <header>
+    <div class="logo">MUSIC<span>.</span></div>
+    <div class="source">SOURCE · YOUTUBE</div>
+  </header>
+
+  <section class="search-box">
+    <input id="query" type="search" value="When I Was Your Man Bruno Mars" placeholder="Cari lagu, artis, atau tempel link YouTube..." autocomplete="off">
+    <button id="search-btn" class="btn-search">Cari</button>
+  </section>
+
+  <section class="player-card">
+    <div class="cover">
+      <button id="cover-btn" class="cover-btn" aria-label="cover play">
+        <img id="cover" src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Cover">
+        <div id="overlay" class="overlay">▶</div>
+      </button>
+    </div>
+
+    <div class="details">
+      <small>NOW PLAYING</small>
+      <h1 id="title">When I Was Your Man</h1>
+      <p id="artist">Bruno Mars</p>
+
+      <div class="status">
+        <span id="status" class="status-text">Loading...</span>
+        <span id="status-dot" class="status-dot"></span>
+      </div>
+
+      <div class="controls">
+        <button id="back-btn" class="control-btn">⏮</button>
+        <button id="play-btn" class="control-btn play">▶</button>
+        <button id="mute-btn" class="control-btn">🔊</button>
+      </div>
+
+      <div class="progress-bar">
+        <input id="progress" type="range" min="0" max="100" value="0">
+        <div class="time-display">
+          <span id="current-time">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+      </div>
+
+      <div class="volume-control">
+        <input id="volume" type="range" min="0" max="100" value="50">
+      </div>
+    </div>
+  </section>
+
+  <section class="playlist">
+    <div class="section-head">
+      <div>
+        <h2>Playlist kau</h2>
+        <span id="playlist-info">13 lagu · klik lagu untuk langsung play</span>
+      </div>
+      <button id="open-search" class="mini-btn">YouTube ↗</button>
+    </div>
+    <div id="playlist-list" class="playlist-list"></div>
+  </section>
+
+  <section class="yt-wrap">
+    <div id="youtube-player"></div>
+  </section>
 </main>
+
 <script>
+// Simple YouTube playlist player (cleaned and formatted)
 const DEFAULT_ID = 'ekzHIouo8Q4';
 const songs = [
   {title: 'Die With A Smile', artist: 'Lady Gaga, Bruno Mars', album: 'Die With A Smile', time: '4:11', id: 'kPa7bsKwL-c'},
@@ -87,7 +98,7 @@ let player = null;
 let ready = false;
 let progressTimer = null;
 
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 const playButton = $('play-btn');
 const coverButton = $('cover-btn');
 const playOverlay = $('overlay');
@@ -140,21 +151,14 @@ function setTrack(id, title, artist) {
 }
 
 function playNextSong() {
-  if (currentSongIndex < songs.length - 1) {
-    currentSongIndex++;
-    const nextSong = songs[currentSongIndex];
-    setTrack(nextSong.id, nextSong.title, nextSong.artist);
+  currentSongIndex = (currentSongIndex + 1) % songs.length;
+  const nextSong = songs[currentSongIndex];
+  setTrack(nextSong.id, nextSong.title, nextSong.artist);
+  if (ready && player) {
     player.loadVideoById(nextSong.id);
     player.playVideo();
-    setStatus(`Memutar: ${nextSong.title}`);
-  } else {
-    currentSongIndex = 0;
-    const firstSong = songs[currentSongIndex];
-    setTrack(firstSong.id, firstSong.title, firstSong.artist);
-    player.loadVideoById(firstSong.id);
-    player.playVideo();
-    setStatus(`Memutar: ${firstSong.title}`);
   }
+  setStatus(`Memutar: ${nextSong.title}`);
 }
 
 window.onYouTubeIframeAPIReady = function () {
@@ -180,12 +184,11 @@ window.onYouTubeIframeAPIReady = function () {
       },
       onStateChange: (event) => {
         if (event.data === YT.PlayerState.PLAYING) setPlaying(true);
-        if (event.data === YT.PlayerState.PAUSED) setPlaying(false);
-        if (event.data === YT.PlayerState.ENDED) {
+        else if (event.data === YT.PlayerState.PAUSED) setPlaying(false);
+        else if (event.data === YT.PlayerState.ENDED) {
           setPlaying(false);
           playNextSong();
-        }
-        if (event.data === YT.PlayerState.BUFFERING) setStatus('Memuat lagu...');
+        } else if (event.data === YT.PlayerState.BUFFERING) setStatus('Memuat lagu...');
       },
       onError: (event) => {
         const messages = {
@@ -198,10 +201,6 @@ window.onYouTubeIframeAPIReady = function () {
         };
         setPlaying(false);
         setStatus(messages[event.data] || `YouTube error ${event.data}.`, true);
-      },
-      onAutoplayBlocked: () => {
-        setPlaying(false);
-        setStatus('Klik tombol Play untuk mulai memutar.', false);
       }
     }
   });
@@ -259,6 +258,10 @@ progress.addEventListener('change', () => {
   player.seekTo((Number(progress.value) / 100) * total, true);
 });
 
+// Initialize
+setTrack(DEFAULT_ID, songs[currentSongIndex].title, songs[currentSongIndex].artist);
+
+// Load YouTube IFrame API
 const api = document.createElement('script');
 api.src = 'https://www.youtube.com/iframe_api';
 api.async = true;
