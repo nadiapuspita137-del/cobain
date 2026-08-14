@@ -1,83 +1,22 @@
 <!doctype html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#09090b" />
-  <meta name="description" content="A minimal music experience for Bruno Mars - When I Was Your Man, powered by YouTube." />
-  <title>When I Was Your Man • Music Player</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080808">
+  <title>Music • When I Was Your Man</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="ambient ambient-a"></div>
-  <div class="ambient ambient-b"></div>
-  <main class="app-shell">
-    <header class="topbar">
-      <div class="brand"><span class="brand-dot"></span> midnight.fm</div>
-      <div class="topbar-note">now playing</div>
-    </header>
-
-    <section class="hero">
-      <div class="cover-wrap">
-        <div class="cover-glow"></div>
-        <button class="cover" id="coverButton" aria-label="Putar When I Was Your Man">
-          <img src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Bruno Mars - When I Was Your Man" />
-          <span class="play-overlay" id="playOverlay">▶</span>
-        </button>
-        <div class="vinyl"></div>
-      </div>
-
-      <div class="track-info">
-        <p class="eyebrow">BRUNO MARS</p>
-        <h1>When I Was<br /><em>Your Man</em></h1>
-        <p class="album">Unorthodox Jukebox · 2012</p>
-        <div class="status-row">
-          <span class="status-dot" id="statusDot"></span>
-          <span id="statusText">Siap diputar</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="player-card">
-      <div class="progress-area">
-        <span id="currentTime">0:00</span>
-        <input id="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Progress lagu" />
-        <span id="duration">0:00</span>
-      </div>
-      <div class="controls">
-        <button class="control secondary" id="restart" aria-label="Mulai ulang">↺</button>
-        <button class="control main" id="playButton" aria-label="Putar">▶</button>
-        <button class="control secondary" id="muteButton" aria-label="Mute">🔊</button>
-      </div>
-      <div class="volume-row">
-        <span>volume</span>
-        <input id="volume" type="range" min="0" max="100" value="75" step="1" aria-label="Volume" />
-      </div>
-    </section>
-
-    <section class="quote-card">
-      <span class="quote-mark">“</span>
-      <p>Sometimes the quietest songs leave the loudest memories.</p>
-    </section>
-
-    <section class="youtube-card">
-      <div class="youtube-head">
-        <div>
-          <p class="eyebrow">OFFICIAL YOUTUBE</p>
-          <h2>Listen from the source</h2>
-        </div>
-        <a href="https://www.youtube.com/watch?v=ekzHIouo8Q4" target="_blank" rel="noopener noreferrer">Open YouTube ↗</a>
-      </div>
-      <div class="video-frame">
-        <div id="youtube-player"></div>
-      </div>
-    </section>
-
-    <footer>Music is streamed through the official YouTube player. No song files are hosted here.</footer>
+  <main class="player">
+    <div class="art"><img src="https://i.ytimg.com/vi/ekzHIouo8Q4/hqdefault.jpg" alt="Bruno Mars - When I Was Your Man"></div>
+    <p class="artist">BRUNO MARS</p>
+    <h1>When I Was<br><span>Your Man</span></h1>
+    <p class="hint">Tekan tombol play di bawah. Langsung dengar dari YouTube.</p>
+    <div class="youtube">
+      <iframe src="https://www.youtube.com/embed/ekzHIouo8Q4?playsinline=1&rel=0&modestbranding=1" title="Bruno Mars - When I Was Your Man" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    </div>
+    <a class="youtube-link" href="https://www.youtube.com/watch?v=ekzHIouo8Q4" target="_blank" rel="noopener">Buka langsung di YouTube ↗</a>
   </main>
-  <script src="script.js"></script>
 </body>
 </html>
